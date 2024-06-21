@@ -5,3 +5,11 @@ packaging==24.1
 pandas
 yfinance
 requests
+flask
+Flask-SQLAlchemy
+Flask-JWT-Extended
+Flask-Bcrypt
+psycopg2-binary
+confluent-kafka
+apache-airflow
+mlflow
