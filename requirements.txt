@@ -1,0 +1,8 @@
+flask
+Flask-SQLAlchemy
+Flask-JWT-Extended
+Flask-Bcrypt
+psycopg2-binary
+confluent-kafka
+apache-airflow
+mlflow
