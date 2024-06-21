@@ -1,0 +1,7 @@
+backtrader==1.9.78.123
+matplotlib==3.9.0
+numpy==2.0.0
+packaging==24.1
+pandas
+yfinance
+requests
