@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 import threading
+from flask_cors import CORS  
 
 db = SQLAlchemy()
 jwt = JWTManager()
@@ -19,11 +20,14 @@ def create_app():
     jwt.init_app(app)
     bcrypt.init_app(app)
 
+    CORS(app)
+
     with app.app_context():
-        from app.routes import auth, backtest, index
+        from app.routes import auth, backtest, index, data
         app.register_blueprint(auth.bp)
         app.register_blueprint(backtest.bp)
         app.register_blueprint(index.bp)
+        app.register_blueprint(data.bp)
         db.create_all()
 
     return app

@@ -17,3 +17,4 @@ psycopg2
 python-dotenv
 ccxt
 yfinance
+flask_cors
