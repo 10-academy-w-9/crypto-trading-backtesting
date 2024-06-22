@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/dell/Desktop/crypto-trading-backtesting/mlruns/772879768246332599/192b3a849bba47b1b98b1e6af7a6cd52/artifacts
+end_time: 1719086780239
+entry_point_name: ''
+experiment_id: '772879768246332599'
+lifecycle_stage: active
+run_id: 192b3a849bba47b1b98b1e6af7a6cd52
+run_name: upset-whale-58
+run_uuid: 192b3a849bba47b1b98b1e6af7a6cd52
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1719086780182
+status: 3
+tags: []
+user_id: dell

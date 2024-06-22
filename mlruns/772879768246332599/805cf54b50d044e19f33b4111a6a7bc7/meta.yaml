@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/dell/Desktop/crypto-trading-backtesting/mlruns/772879768246332599/805cf54b50d044e19f33b4111a6a7bc7/artifacts
+end_time: 1719087004061
+entry_point_name: ''
+experiment_id: '772879768246332599'
+lifecycle_stage: active
+run_id: 805cf54b50d044e19f33b4111a6a7bc7
+run_name: traveling-fish-937
+run_uuid: 805cf54b50d044e19f33b4111a6a7bc7
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1719087004003
+status: 3
+tags: []
+user_id: dell
