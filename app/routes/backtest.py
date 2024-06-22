@@ -1,12 +1,12 @@
-from flask import Blueprint, request, jsonify
-from app.models.backtest import Backtest, Parameter, Result
+import threading
+from flask import Blueprint, request, jsonify, current_app
+from app.models.backtest import Backtest, Parameter
 from app import db
 from flask_jwt_extended import jwt_required
 from app.services.backtest_service import run_backtest_by_id
 from app.services.kafka_service import kafka_service
 
 bp = Blueprint('backtest', __name__)
-
 
 @bp.route('/backtest', methods=['POST'])
 @jwt_required()
@@ -44,12 +44,3 @@ def run_backtest():
     return jsonify({"msg": "Backtest created and published to Kafka", "backtest_id": new_backtest.id}), 201
 
 
-def consume_backtest_scenes():
-    def callback(message):
-        backtest_id = message.get('backtest_id')
-        run_backtest_by_id(backtest_id)
-
-    kafka_service.consume('backtest_scenes', callback)
-
-
-consume_backtest_scenes()  # Start consuming Kafka messages in a separate thread
