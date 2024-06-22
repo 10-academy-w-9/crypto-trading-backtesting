@@ -164,6 +164,24 @@ def run_backtest(strategy, symbol, start_date, end_date):
 
     # Get analyzers data
     strat = results[0]
+
+    # Prepare results
+    result_dict = {
+        "Starting Portfolio Value": start_value,
+        "Ending Portfolio Value": end_value,
+        "Sharpe Ratio": strat.analyzers.sharpe.get_analysis().get('sharperatio', 'N/A'),
+        "Max Drawdown": strat.analyzers.drawdown.get_analysis().get('max', {}).get('drawdown', 'N/A'),
+        "Total Trades": strat.analyzers.trades.get_analysis().get('total', {}).get('total', 'N/A'),
+        "Winning Trades": strat.analyzers.trades.get_analysis().get('won', {}).get('total', 'N/A'),
+        "Losing Trades": strat.analyzers.trades.get_analysis().get('lost', {}).get('total', 'N/A'),
+        "Total Return": strat.analyzers.returns.get_analysis().get('rtot', 'N/A')
+    }
+
+    # Plot the results
+    cerebro.plot(style='candlestick')
+
+    return result_dict
+
     trades = strat.analyzers.trades.get_analysis()
     drawdown = strat.analyzers.drawdown.get_analysis()
     sharpe = strat.analyzers.sharpe.get_analysis()
