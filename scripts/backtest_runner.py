@@ -2,10 +2,6 @@ import pandas as pd
 from sqlalchemy import create_engine
 import backtrader as bt
 import os
-import mlflow
-import mlflow.pyfunc
-import mlflow.tracking
-from mlflow import log_metric, log_param, log_artifact
 
 # RDS connection information
 rds_host = os.getenv('PG_HOST')
@@ -23,15 +19,23 @@ def fetch_data(symbol, start_date, end_date):
         WHERE timestamp >= '{start_date}' AND timestamp <= '{end_date}';
     """
     try:
+        print(f"Executing query:\n{query}\n")  # Print the SQL query for debugging purposes
+        
         data = pd.read_sql(query, con=engine)
+        print(f"Fetched data:\n{data.head()}\n")  # Print the first few rows of fetched data for debugging
+        
+        # Check if data is empty
         if data.empty:
             raise ValueError("No data returned from query.")
         
+        # Convert 'date' column to datetime
         data['date'] = pd.to_datetime(data['date'], format='%Y-%m-%d')
+        
+        # Set 'date' column as index
         data.set_index('date', inplace=True)
+        
+        # Ensure column names are correctly capitalized for Backtrader
         data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
-
-        print(f"Fetched data from {data.index.min()} to {data.index.max()}")  # Add logging to check the date range
 
         return data
     except Exception as e:
@@ -58,233 +62,108 @@ class RsiBollingerBandsStrategy(bt.Strategy):
         else:
             if self.rsi > self.params.overbought or self.data.close >= self.bbands.lines.top:
                 self.sell()
+class MacdStrategy(bt.Strategy):
+    params = (
+        ('macd1_period', 12),
+        ('macd2_period', 26),
+        ('signal_period', 9),
+    )
+
+    def __init__(self):
+        self.macd = bt.indicators.MACDHisto(period_me1=self.params.macd1_period, period_me2=self.params.macd2_period, period_signal=self.params.signal_period)
+
+    def next(self):
+        if not self.position:
+            if self.macd.lines.histo[0] > 0 and self.macd.lines.histo[-1] <= 0:
+                self.buy()
+        else:
+            if self.macd.lines.histo[0] < 0 and self.macd.lines.histo[-1] >= 0:
+                self.sell()
 
 class StochasticOscillatorStrategy(bt.Strategy):
     params = (
-        ('k_period', 14),
-        ('d_period', 3),
-        ('oversold', 20),
-        ('overbought', 80),
+        ('stoch_period', 14),
+        ('stoch_low', 20),
+        ('stoch_high', 80),
     )
 
     def __init__(self):
-        self.stoch = bt.indicators.StochasticSlow(
-            period=self.params.k_period,
-            period_dfast=self.params.d_period,
-        )
+        self.stoch = bt.indicators.Stochastic(period=self.params.stoch_period)
 
     def next(self):
         if not self.position:
-            if self.stoch.percK < self.params.oversold:
+            if self.stoch.lines.percK[0] < self.params.stoch_low and self.stoch.lines.percK[-1] >= self.params.stoch_low:
                 self.buy()
         else:
-            if self.stoch.percK > self.params.overbought:
+            if self.stoch.lines.percK[0] > self.params.stoch_high and self.stoch.lines.percK[-1] <= self.params.stoch_high:
                 self.sell()
-
-class SimpleMovingAverageStrategy(bt.Strategy):
-    params = (
-        ('maperiod', 15),
-    )
-
-    def __init__(self):
-        self.dataclose = self.datas[0].close
-        self.order = None
-        self.buyprice = None
-        self.buycomm = None
-        self.sma = bt.indicators.SimpleMovingAverage(self.datas[0], period=self.params.maperiod)
-        bt.indicators.ExponentialMovingAverage(self.datas[0], period=25)
-        bt.indicators.WeightedMovingAverage(self.datas[0], period=25, subplot=True)
-        bt.indicators.StochasticSlow(self.datas[0])
-        bt.indicators.MACDHisto(self.datas[0])
-        rsi = bt.indicators.RSI(self.datas[0])
-        bt.indicators.SmoothedMovingAverage(rsi, period=10)
-        bt.indicators.ATR(self.datas[0], plot=False)
-
-    def log(self, txt, dt=None):
-        dt = dt or self.datas[0].datetime.date(0)
-        print('%s, %s' % (dt.isoformat(), txt))
-
-    def notify_order(self, order):
-        if order.status in [order.Submitted, order.Accepted]:
-            return
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                self.log('BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                         (order.executed.price, order.executed.value, order.executed.comm))
-                self.buyprice = order.executed.price
-                self.buycomm = order.executed.comm
-            else:
-                self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                         (order.executed.price, order.executed.value, order.executed.comm))
-            self.bar_executed = len(self)
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
-        self.order = None
-
-    def notify_trade(self, trade):
-        if not trade.isclosed:
-            return
-        self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' % (trade.pnl, trade.pnlcomm))
-
-    def next(self):
-        self.log('Close, %.2f' % self.dataclose[0])
-        if self.order:
-            return
-        if not self.position:
-            if self.dataclose[0] > self.sma[0]:
-                self.log('BUY CREATE, %.2f' % self.dataclose[0])
-                self.order = self.buy()
-        else:
-            if self.dataclose[0] < self.sma[0]:
-                self.log('SELL CREATE, %.2f' % self.dataclose[0])
-                self.order = self.sell()
-
-class RefinedSMAStrategy(bt.Strategy):
-    params = (
-        ('short_period', 10),
-        ('long_period', 50),
-    )
-
-    def __init__(self):
-        self.short_sma = bt.indicators.SimpleMovingAverage(self.datas[0].close, period=self.params.short_period)
-        self.long_sma = bt.indicators.SimpleMovingAverage(self.datas[0].close, period=self.params.long_period)
-        self.dataclose = self.datas[0].close
-        self.order = None
-        self.buyprice = None
-        self.buycomm = None
-
-    def log(self, txt, dt=None):
-        dt = dt or self.datas[0].datetime.date(0)
-        print('%s, %s' % (dt.isoformat(), txt))
-
-    def notify_order(self, order):
-        if order.status in [order.Submitted, order.Accepted]:
-            return
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                self.log('BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                         (order.executed.price, order.executed.value, order.executed.comm))
-                self.buyprice = order.executed.price
-                self.buycomm = order.executed.comm
-            else:
-                self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                         (order.executed.price, order.executed.value, order.executed.comm))
-            self.bar_executed = len(self)
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
-        self.order = None
-
-    def notify_trade(self, trade):
-        if not trade.isclosed:
-            return
-        self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' % (trade.pnl, trade.pnlcomm))
-
-    def next(self):
-        self.log('Close, %.2f' % self.dataclose[0])
-        if self.order:
-            return
-        if not self.position:
-            if self.short_sma[0] > self.long_sma[0]:
-                self.log('BUY CREATE, %.2f' % self.dataclose[0])
-                self.order = self.buy()
-        else:
-            if self.short_sma[0] < self.long_sma[0]:
-                self.log('SELL CREATE, %.2f' % self.dataclose[0])
-                self.order = self.sell()
 
 def run_backtest(strategy, symbol, start_date, end_date):
     data = fetch_data(symbol, start_date, end_date)
+    
     data_feed = bt.feeds.PandasData(dataname=data)
 
+    # Initialize cerebro
     cerebro = bt.Cerebro()
+    
+    # Add strategy
     cerebro.addstrategy(strategy)
+    
+    # Add data feed
     cerebro.adddata(data_feed)
+    
+    # Set initial cash
     cerebro.broker.set_cash(10000)
+    
+    # Set commission
     cerebro.broker.setcommission(commission=0.002)
-
+    
     # Add analyzers
-    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='tradeanalyzer')
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
-    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
-    cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')  # Add Returns analyzer
+    cerebro.addanalyzer(bt.analyzers.SharpeRatio_A, _name='sharpe')
 
-    initial_value = cerebro.broker.getvalue()
-    print(f'Starting Portfolio Value: {initial_value:.2f}')
+    # Print starting conditions
+    print(f'Starting Portfolio Value: {cerebro.broker.getvalue():.2f}')
 
-    results = cerebro.run()
+    # Run backtest
+    result = cerebro.run()
 
-    final_value = cerebro.broker.getvalue()
-    print(f'Ending Portfolio Value: {final_value:.2f}')
+    # Extracting backtest metrics
+    total_return = cerebro.broker.getvalue() / 10000 - 1
+    number_of_trades = result[0].analyzers.tradeanalyzer.get_analysis()['total']['closed']
+    winning_trades = result[0].analyzers.tradeanalyzer.get_analysis()['won']['total']
+    losing_trades = result[0].analyzers.tradeanalyzer.get_analysis()['lost']['total']
+    max_drawdown = result[0].analyzers.drawdown.get_analysis()['max']['drawdown']
+    sharpe_ratio = result[0].analyzers.sharpe.get_analysis()['sharperatio']
 
-    # Get analyzers data
-    strat = results[0]
-    trades = strat.analyzers.trades.get_analysis()
-    drawdown = strat.analyzers.drawdown.get_analysis()
-    sharpe = strat.analyzers.sharpe.get_analysis()
-    returns = strat.analyzers.returns.get_analysis()  # Get returns analysis
+    # Print ending conditions
+    print(f'Ending Portfolio Value: {cerebro.broker.getvalue():.2f}')
 
-    # Prepare results
-    result_dict = {
-        "Starting Portfolio Value": initial_value,
-        "Ending Portfolio Value": final_value,
-        "Sharpe Ratio": sharpe.get('sharperatio', 'N/A'),
-        "Max Drawdown": drawdown.get('max', {}).get('drawdown', 'N/A'),
-        "Total Trades": trades.get('total', {}).get('total', 'N/A'),
-        "Winning Trades": trades.get('won', {}).get('total', 'N/A'),
-        "Losing Trades": trades.get('lost', {}).get('total', 'N/A'),
-        "Total Return": returns.get('rtot', 'N/A')  # Get total return
+    # Return results as a dictionary
+    return {
+        'backtest_id': 1,
+        'total_return': total_return,
+        'number_of_trades': number_of_trades,
+        'winning_trades': winning_trades,
+        'losing_trades': losing_trades,
+        'max_drawdown': max_drawdown,
+        'sharpe_ratio': sharpe_ratio
     }
 
-    # Plot the results
-    cerebro.plot(style='candlestick')
-
-    return result_dict
-
-def safe_log_metric(key, value):
-    try:
-        value = float(value)  # Convert to float
-    except (TypeError, ValueError):
-        value = 0.0  # Default to 0.0 if conversion fails
-    log_metric(key, value)
-
 if __name__ == "__main__":
-    mlflow.set_tracking_uri("http://localhost:5000")
-    mlflow.set_experiment("Crypto Backtesting")
-
-    symbol = 'BTC/USDT'
+    symbol = 'ETH/USD'
     start_date = '2023-06-20'
     end_date = '2024-06-20'
-
-    strategies = [
-        (RsiBollingerBandsStrategy, "RSI Bollinger Bands Strategy"),
-        (StochasticOscillatorStrategy, "Stochastic Oscillator Strategy"),
-        (SimpleMovingAverageStrategy, "Simple Moving Average Strategy"),
-    ]
-
-    for strategy, strategy_name in strategies:
-        with mlflow.start_run(run_name=strategy_name):
-            log_param("symbol", symbol)
-            log_param("start_date", start_date)
-            log_param("end_date", end_date)
-            log_param("strategy", strategy_name)
-
-            results = run_backtest(strategy, symbol, start_date, end_date)
-            
-            safe_log_metric("initial_value", results["Starting Portfolio Value"])
-            safe_log_metric("final_value", results["Ending Portfolio Value"])
-            safe_log_metric("returns", results["Total Return"])
-            safe_log_metric("total_trades", results["Total Trades"])
-            safe_log_metric("winning_trades", results["Winning Trades"])
-            safe_log_metric("losing_trades", results["Losing Trades"])
-            safe_log_metric("max_drawdown", results["Max Drawdown"])
-            safe_log_metric("sharpe_ratio", results["Sharpe Ratio"])
-
-            print(f"Strategy: {strategy_name}")
-            print(f"Initial Value: {results['Starting Portfolio Value']}")
-            print(f"Final Value: {results['Ending Portfolio Value']}")
-            print(f"Returns: {results['Total Return']}")
-            print(f"Total Trades: {results['Total Trades']}")
-            print(f"Winning Trades: {results['Winning Trades']}")
-            print(f"Losing Trades: {results['Losing Trades']}")
-            print(f"Max Drawdown: {results['Max Drawdown']}")
-            print(f"Sharpe Ratio: {results['Sharpe Ratio']}")
+    
+    backtest_results_rsi = run_backtest(RsiBollingerBandsStrategy, symbol, start_date, end_date)
+    print("RSI Bollinger Bands Strategy Results:")
+    print(backtest_results_rsi)
+    
+    backtest_results_macd = run_backtest(MacdStrategy, symbol, start_date, end_date)
+    print("MACD Strategy Results:")
+    print(backtest_results_macd)
+    
+    backtest_results_stoch = run_backtest(StochasticOscillatorStrategy, symbol, start_date, end_date)
+    print("Stochastic Oscillator Strategy Results:")
+    print(backtest_results_stoch)
