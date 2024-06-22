@@ -2,6 +2,7 @@ import logging
 from confluent_kafka.admin import AdminClient, NewTopic
 from confluent_kafka import Producer, Consumer, KafkaException, KafkaError
 import json
+from decimal import Decimal
 
 class KafkaService:
     def __init__(self, brokers):
@@ -29,9 +30,15 @@ class KafkaService:
         else:
             logging.info(f"Topic {topic} already exists")
 
+    def json_serializer(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        raise TypeError("Type not serializable")
+
     def produce(self, topic, message):
         logging.info(f"Producing message to topic {topic}: {message}")
-        self.producer.produce(topic, key=None, value=json.dumps(message))
+        serialized_message = json.dumps(message, default=self.json_serializer)
+        self.producer.produce(topic, key=None, value=serialized_message)
         self.producer.flush()
         logging.info("Message produced successfully")
 

@@ -10,4 +10,4 @@ class MLflowService:
             for key, value in metrics.items():
                 mlflow.log_metric(key, value)
 
-mlflow_service = MLflowService(tracking_uri='http://localhost:5000')
+mlflow_service = MLflowService(tracking_uri='http://localhost:5050')

@@ -7,7 +7,8 @@ def run_backtest_by_id(backtest_id):
     backtest = Backtest.query.get(backtest_id)
     if not backtest:
         return
-
+    
+    
     # Simulate backtest processing
     result = Result(
         backtest_id=backtest_id,
