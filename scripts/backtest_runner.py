@@ -153,6 +153,7 @@ def run_backtest(strategy, symbol, start_date, end_date):
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
+    cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')  # Add Returns analyzer
 
     initial_value = cerebro.broker.getvalue()
     print(f'Starting Portfolio Value: {initial_value:.2f}')
@@ -164,17 +165,21 @@ def run_backtest(strategy, symbol, start_date, end_date):
 
     # Get analyzers data
     strat = results[0]
+    trades = strat.analyzers.trades.get_analysis()
+    drawdown = strat.analyzers.drawdown.get_analysis()
+    sharpe = strat.analyzers.sharpe.get_analysis()
+    returns = strat.analyzers.returns.get_analysis()  # Get returns analysis
 
     # Prepare results
     result_dict = {
-        "Starting Portfolio Value": start_value,
-        "Ending Portfolio Value": end_value,
-        "Sharpe Ratio": strat.analyzers.sharpe.get_analysis().get('sharperatio', 'N/A'),
-        "Max Drawdown": strat.analyzers.drawdown.get_analysis().get('max', {}).get('drawdown', 'N/A'),
-        "Total Trades": strat.analyzers.trades.get_analysis().get('total', {}).get('total', 'N/A'),
-        "Winning Trades": strat.analyzers.trades.get_analysis().get('won', {}).get('total', 'N/A'),
-        "Losing Trades": strat.analyzers.trades.get_analysis().get('lost', {}).get('total', 'N/A'),
-        "Total Return": strat.analyzers.returns.get_analysis().get('rtot', 'N/A')
+        "Starting Portfolio Value": initial_value,
+        "Ending Portfolio Value": final_value,
+        "Sharpe Ratio": sharpe.get('sharperatio', 'N/A'),
+        "Max Drawdown": drawdown.get('max', {}).get('drawdown', 'N/A'),
+        "Total Trades": trades.get('total', {}).get('total', 'N/A'),
+        "Winning Trades": trades.get('won', {}).get('total', 'N/A'),
+        "Losing Trades": trades.get('lost', {}).get('total', 'N/A'),
+        "Total Return": returns.get('rtot', 'N/A')  # Get total return
     }
 
     # Plot the results
@@ -182,30 +187,12 @@ def run_backtest(strategy, symbol, start_date, end_date):
 
     return result_dict
 
-    trades = strat.analyzers.trades.get_analysis()
-    drawdown = strat.analyzers.drawdown.get_analysis()
-    sharpe = strat.analyzers.sharpe.get_analysis()
-
-    # Initialize metrics
-    total_trades = trades.total.total if 'total' in trades else 0
-    winning_trades = trades.won.total if 'won' in trades else 0
-    losing_trades = trades.lost.total if 'lost' in trades else 0
-    max_drawdown = drawdown.max.drawdown if 'max' in drawdown and 'drawdown' in drawdown.max else 0.0
-    sharpe_ratio = sharpe['sharperatio'] if 'sharperatio' in sharpe else 0.0
-
-    returns = (final_value - initial_value) / initial_value
-
-    # print(f"Total Trades: {total_trades}, Winning Trades: {winning_trades}, Losing Trades: {losing_trades}")
-    # print(f"Max Drawdown: {max_drawdown:.2f}, Sharpe Ratio: {sharpe_ratio:.2f}")
-    # print(f"Strategy: {strategy.__name__}, Initial Value: {initial_value}, Final Value: {final_value}, Returns: {returns:.2f}")
-
-    return initial_value, final_value, returns, total_trades, winning_trades, losing_trades, max_drawdown, sharpe_ratio
-
 def safe_log_metric(key, value):
-    if value is not None and not (isinstance(value, float) and (value != value)):  # Check for NaN
-        log_metric(key, value)
-    else:
-        log_metric(key, 0.0)  # Log zero if the value is None or NaN
+    try:
+        value = float(value)  # Convert to float
+    except (TypeError, ValueError):
+        value = 0.0  # Default to 0.0 if conversion fails
+    log_metric(key, value)
 
 if __name__ == "__main__":
     mlflow.set_tracking_uri("http://localhost:5000")
@@ -228,23 +215,23 @@ if __name__ == "__main__":
             log_param("end_date", end_date)
             log_param("strategy", strategy_name)
 
-            initial_value, final_value, returns, total_trades, winning_trades, losing_trades, max_drawdown, sharpe_ratio = run_backtest(strategy, symbol, start_date, end_date)
-
-            safe_log_metric("initial_value", initial_value)
-            safe_log_metric("final_value", final_value)
-            safe_log_metric("returns", returns)
-            safe_log_metric("total_trades", total_trades)
-            safe_log_metric("winning_trades", winning_trades)
-            safe_log_metric("losing_trades", losing_trades)
-            safe_log_metric("max_drawdown", max_drawdown)
-            safe_log_metric("sharpe_ratio", sharpe_ratio)
+            results = run_backtest(strategy, symbol, start_date, end_date)
+            
+            safe_log_metric("initial_value", results["Starting Portfolio Value"])
+            safe_log_metric("final_value", results["Ending Portfolio Value"])
+            safe_log_metric("returns", results["Total Return"])
+            safe_log_metric("total_trades", results["Total Trades"])
+            safe_log_metric("winning_trades", results["Winning Trades"])
+            safe_log_metric("losing_trades", results["Losing Trades"])
+            safe_log_metric("max_drawdown", results["Max Drawdown"])
+            safe_log_metric("sharpe_ratio", results["Sharpe Ratio"])
 
             print(f"Strategy: {strategy_name}")
-            print(f"Initial Value: {initial_value}")
-            print(f"Final Value: {final_value}")
-            print(f"Returns: {returns}")
-            print(f"Total Trades: {total_trades}")
-            print(f"Winning Trades: {winning_trades}")
-            print(f"Losing Trades: {losing_trades}")
-            print(f"Max Drawdown: {max_drawdown}")
-            print(f"Sharpe Ratio: {sharpe_ratio}")
+            print(f"Initial Value: {results['Starting Portfolio Value']}")
+            print(f"Final Value: {results['Ending Portfolio Value']}")
+            print(f"Returns: {results['Total Return']}")
+            print(f"Total Trades: {results['Total Trades']}")
+            print(f"Winning Trades: {results['Winning Trades']}")
+            print(f"Losing Trades: {results['Losing Trades']}")
+            print(f"Max Drawdown: {results['Max Drawdown']}")
+            print(f"Sharpe Ratio: {results['Sharpe Ratio']}")
