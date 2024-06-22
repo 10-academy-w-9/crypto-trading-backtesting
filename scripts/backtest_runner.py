@@ -2,6 +2,10 @@ import pandas as pd
 from sqlalchemy import create_engine
 import backtrader as bt
 import os
+import mlflow
+import mlflow.pyfunc
+import mlflow.tracking
+from mlflow import log_metric, log_param, log_artifact
 
 # RDS connection information
 rds_host = os.getenv('PG_HOST')
@@ -19,23 +23,15 @@ def fetch_data(symbol, start_date, end_date):
         WHERE timestamp >= '{start_date}' AND timestamp <= '{end_date}';
     """
     try:
-        print(f"Executing query:\n{query}\n")  # Print the SQL query for debugging purposes
-        
         data = pd.read_sql(query, con=engine)
-        print(f"Fetched data:\n{data.head()}\n")  # Print the first few rows of fetched data for debugging
-        
-        # Check if data is empty
         if data.empty:
             raise ValueError("No data returned from query.")
         
-        # Convert 'date' column to datetime
         data['date'] = pd.to_datetime(data['date'], format='%Y-%m-%d')
-        
-        # Set 'date' column as index
         data.set_index('date', inplace=True)
-        
-        # Ensure column names are correctly capitalized for Backtrader
         data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
+
+        print(f"Fetched data from {data.index.min()} to {data.index.max()}")  # Add logging to check the date range
 
         return data
     except Exception as e:
@@ -63,6 +59,28 @@ class RsiBollingerBandsStrategy(bt.Strategy):
             if self.rsi > self.params.overbought or self.data.close >= self.bbands.lines.top:
                 self.sell()
 
+class StochasticOscillatorStrategy(bt.Strategy):
+    params = (
+        ('k_period', 14),
+        ('d_period', 3),
+        ('oversold', 20),
+        ('overbought', 80),
+    )
+
+    def __init__(self):
+        self.stoch = bt.indicators.StochasticSlow(
+            period=self.params.k_period,
+            period_dfast=self.params.d_period,
+        )
+
+    def next(self):
+        if not self.position:
+            if self.stoch.percK < self.params.oversold:
+                self.buy()
+        else:
+            if self.stoch.percK > self.params.overbought:
+                self.sell()
+
 class SimpleMovingAverageStrategy(bt.Strategy):
     params = (
         ('maperiod', 15),
@@ -74,7 +92,6 @@ class SimpleMovingAverageStrategy(bt.Strategy):
         self.buyprice = None
         self.buycomm = None
         self.sma = bt.indicators.SimpleMovingAverage(self.datas[0], period=self.params.maperiod)
-        # Additional indicators for plotting
         bt.indicators.ExponentialMovingAverage(self.datas[0], period=25)
         bt.indicators.WeightedMovingAverage(self.datas[0], period=25, subplot=True)
         bt.indicators.StochasticSlow(self.datas[0])
@@ -124,66 +141,92 @@ class SimpleMovingAverageStrategy(bt.Strategy):
 
 def run_backtest(strategy, symbol, start_date, end_date):
     data = fetch_data(symbol, start_date, end_date)
-    
-    # Create a data feed
     data_feed = bt.feeds.PandasData(dataname=data)
 
-    # Initialize cerebro
     cerebro = bt.Cerebro()
     cerebro.addstrategy(strategy)
     cerebro.adddata(data_feed)
-    cerebro.broker.set_cash(100000)
+    cerebro.broker.set_cash(10000)
     cerebro.broker.setcommission(commission=0.002)
-    # cerebro.addsizer(bt.sizers.FixedSize, stake=5)
 
-    # Add analyzers for performance metrics
-    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
-    cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
+    # Add analyzers
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
-    cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
+    cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
+    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
 
-    # Print starting conditions
-    start_value = cerebro.broker.getvalue()
-    print(f'Starting Portfolio Value: {start_value:.2f}')
+    initial_value = cerebro.broker.getvalue()
+    print(f'Starting Portfolio Value: {initial_value:.2f}')
 
-    # Run backtest
     results = cerebro.run()
 
-    # Print ending conditions
-    end_value = cerebro.broker.getvalue()
-    print(f'Ending Portfolio Value: {end_value:.2f}')
+    final_value = cerebro.broker.getvalue()
+    print(f'Ending Portfolio Value: {final_value:.2f}')
 
-    # Extract and print analyzers results
+    # Get analyzers data
     strat = results[0]
+    trades = strat.analyzers.trades.get_analysis()
+    drawdown = strat.analyzers.drawdown.get_analysis()
+    sharpe = strat.analyzers.sharpe.get_analysis()
 
-    # Prepare results
-    result_dict = {
-        "Starting Portfolio Value": start_value,
-        "Ending Portfolio Value": end_value,
-        "Sharpe Ratio": strat.analyzers.sharpe.get_analysis().get('sharperatio', 'N/A'),
-        "Max Drawdown": strat.analyzers.drawdown.get_analysis().get('max', {}).get('drawdown', 'N/A'),
-        "Total Trades": strat.analyzers.trades.get_analysis().get('total', {}).get('total', 'N/A'),
-        "Winning Trades": strat.analyzers.trades.get_analysis().get('won', {}).get('total', 'N/A'),
-        "Losing Trades": strat.analyzers.trades.get_analysis().get('lost', {}).get('total', 'N/A'),
-        "Total Return": strat.analyzers.returns.get_analysis().get('rtot', 'N/A')
-    }
+    # Initialize metrics
+    total_trades = trades.total.total if 'total' in trades else 0
+    winning_trades = trades.won.total if 'won' in trades else 0
+    losing_trades = trades.lost.total if 'lost' in trades else 0
+    max_drawdown = drawdown.max.drawdown if 'max' in drawdown and 'drawdown' in drawdown.max else 0.0
+    sharpe_ratio = sharpe['sharperatio'] if 'sharperatio' in sharpe else 0.0
 
-    # Plot the results
-    cerebro.plot(style='candlestick')
-    
-    return result_dict
+    returns = (final_value - initial_value) / initial_value
 
+    # print(f"Total Trades: {total_trades}, Winning Trades: {winning_trades}, Losing Trades: {losing_trades}")
+    # print(f"Max Drawdown: {max_drawdown:.2f}, Sharpe Ratio: {sharpe_ratio:.2f}")
+    # print(f"Strategy: {strategy.__name__}, Initial Value: {initial_value}, Final Value: {final_value}, Returns: {returns:.2f}")
+
+    return initial_value, final_value, returns, total_trades, winning_trades, losing_trades, max_drawdown, sharpe_ratio
+
+def safe_log_metric(key, value):
+    if value is not None and not (isinstance(value, float) and (value != value)):  # Check for NaN
+        log_metric(key, value)
+    else:
+        log_metric(key, 0.0)  # Log zero if the value is None or NaN
 
 if __name__ == "__main__":
+    mlflow.set_tracking_uri("http://localhost:5000")
+    mlflow.set_experiment("Crypto Backtesting")
+
     symbol = 'BTC/USDT'
     start_date = '2023-06-20'
     end_date = '2024-06-20'
-    
-    for strategy in [RsiBollingerBandsStrategy,RsiBollingerBandsStrategy]:
-        run_backtest(strategy, symbol, start_date, end_date)
-    
-    try:
-        data = fetch_data(symbol, start_date, end_date)
-        print(data.head())  
-    except Exception as e:
-        print(f"Error running backtest: {e}")
+
+    strategies = [
+        (RsiBollingerBandsStrategy, "RSI Bollinger Bands Strategy"),
+        (StochasticOscillatorStrategy, "Stochastic Oscillator Strategy"),
+        (SimpleMovingAverageStrategy, "Simple Moving Average Strategy"),
+    ]
+
+    for strategy, strategy_name in strategies:
+        with mlflow.start_run(run_name=strategy_name):
+            log_param("symbol", symbol)
+            log_param("start_date", start_date)
+            log_param("end_date", end_date)
+            log_param("strategy", strategy_name)
+
+            initial_value, final_value, returns, total_trades, winning_trades, losing_trades, max_drawdown, sharpe_ratio = run_backtest(strategy, symbol, start_date, end_date)
+
+            safe_log_metric("initial_value", initial_value)
+            safe_log_metric("final_value", final_value)
+            safe_log_metric("returns", returns)
+            safe_log_metric("total_trades", total_trades)
+            safe_log_metric("winning_trades", winning_trades)
+            safe_log_metric("losing_trades", losing_trades)
+            safe_log_metric("max_drawdown", max_drawdown)
+            safe_log_metric("sharpe_ratio", sharpe_ratio)
+
+            print(f"Strategy: {strategy_name}")
+            print(f"Initial Value: {initial_value}")
+            print(f"Final Value: {final_value}")
+            print(f"Returns: {returns}")
+            print(f"Total Trades: {total_trades}")
+            print(f"Winning Trades: {winning_trades}")
+            print(f"Losing Trades: {losing_trades}")
+            print(f"Max Drawdown: {max_drawdown}")
+            print(f"Sharpe Ratio: {sharpe_ratio}")
