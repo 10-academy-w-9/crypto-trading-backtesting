@@ -170,7 +170,7 @@ def run_backtest(strategy, symbol, start_date, end_date):
 
     # Plot the results
     cerebro.plot(style='candlestick')
-    
+
     return result_dict
 
 
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     start_date = '2023-06-20'
     end_date = '2024-06-20'
     
-    for strategy in [RsiBollingerBandsStrategy,RsiBollingerBandsStrategy]:
+    for strategy in [RsiBollingerBandsStrategy,SimpleMovingAverageStrategy]:
         run_backtest(strategy, symbol, start_date, end_date)
     
     try:
