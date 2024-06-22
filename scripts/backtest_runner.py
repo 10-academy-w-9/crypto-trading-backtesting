@@ -122,6 +122,59 @@ class SimpleMovingAverageStrategy(bt.Strategy):
                 self.log('SELL CREATE, %.2f' % self.dataclose[0])
                 self.order = self.sell()
 
+class RefinedSMAStrategy(bt.Strategy):
+    params = (
+        ('short_period', 10),
+        ('long_period', 50),
+    )
+
+    def __init__(self):
+        self.short_sma = bt.indicators.SimpleMovingAverage(self.datas[0].close, period=self.params.short_period)
+        self.long_sma = bt.indicators.SimpleMovingAverage(self.datas[0].close, period=self.params.long_period)
+        self.dataclose = self.datas[0].close
+        self.order = None
+        self.buyprice = None
+        self.buycomm = None
+
+    def log(self, txt, dt=None):
+        dt = dt or self.datas[0].datetime.date(0)
+        print('%s, %s' % (dt.isoformat(), txt))
+
+    def notify_order(self, order):
+        if order.status in [order.Submitted, order.Accepted]:
+            return
+        if order.status in [order.Completed]:
+            if order.isbuy():
+                self.log('BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
+                         (order.executed.price, order.executed.value, order.executed.comm))
+                self.buyprice = order.executed.price
+                self.buycomm = order.executed.comm
+            else:
+                self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
+                         (order.executed.price, order.executed.value, order.executed.comm))
+            self.bar_executed = len(self)
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.log('Order Canceled/Margin/Rejected')
+        self.order = None
+
+    def notify_trade(self, trade):
+        if not trade.isclosed:
+            return
+        self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' % (trade.pnl, trade.pnlcomm))
+
+    def next(self):
+        self.log('Close, %.2f' % self.dataclose[0])
+        if self.order:
+            return
+        if not self.position:
+            if self.short_sma[0] > self.long_sma[0]:
+                self.log('BUY CREATE, %.2f' % self.dataclose[0])
+                self.order = self.buy()
+        else:
+            if self.short_sma[0] < self.long_sma[0]:
+                self.log('SELL CREATE, %.2f' % self.dataclose[0])
+                self.order = self.sell()
+
 def run_backtest(strategy, symbol, start_date, end_date):
     data = fetch_data(symbol, start_date, end_date)
     
@@ -179,7 +232,7 @@ if __name__ == "__main__":
     start_date = '2023-06-20'
     end_date = '2024-06-20'
     
-    for strategy in [RsiBollingerBandsStrategy,SimpleMovingAverageStrategy]:
+    for strategy in [RsiBollingerBandsStrategy,SimpleMovingAverageStrategy,RefinedSMAStrategy]:
         run_backtest(strategy, symbol, start_date, end_date)
     
     try:
