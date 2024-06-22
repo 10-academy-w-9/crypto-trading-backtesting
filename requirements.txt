@@ -13,3 +13,7 @@ psycopg2-binary
 confluent-kafka
 apache-airflow
 mlflow
+psycopg2
+python-dotenv
+ccxt
+yfinance

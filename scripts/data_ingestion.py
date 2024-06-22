@@ -1,11 +1,9 @@
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-import ccxt
+import yfinance as yf
 import pandas as pd
 from time import sleep
-from requests.exceptions import ReadTimeout
-
 
 load_dotenv()
 
@@ -19,43 +17,31 @@ rds_password = os.getenv('PG_PASSWORD')
 # Connect to RDS (PostgreSQL)
 engine = create_engine(f'postgresql+psycopg2://{rds_user}:{rds_password}@{rds_host}:{rds_port}/{rds_db}')
 
-# Connect to Binance
-binance = ccxt.binance()
-
-binance = ccxt.binance({
-    'options': {
-        'adjustForTimeDifference': True,
-    },
-    'timeout': 20000, 
-})
-
-def fetch_ohlcv(symbol, timeframe, since=None, limit=1000):
+def fetch_ohlcv(symbol, since):
     try:
-        ohlcv = binance.fetch_ohlcv(symbol, timeframe, since=since, limit=limit)
-        return ohlcv
-    except ReadTimeout:
-        print(f"Timeout occurred for {symbol}. Retrying...")
-        sleep(5)  # Delay before retrying
-        return fetch_ohlcv(symbol, timeframe, since, limit)
-
-def ohlcv_to_dataframe(ohlcv):
-    df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-    return df
+        # Fetch data from Yahoo Finance
+        ticker = yf.Ticker(symbol)
+        ohlcv = ticker.history(period='1d', start=since)
+        return ohlcv.reset_index()
+    except Exception as e:
+        print(f"Error fetching data for {symbol}: {str(e)}")
+        return None
 
 def store_dataframe(df, table_name):
     df.to_sql(table_name, con=engine, if_exists='append', index=False)
 
 # Fetch and store data for multiple symbols
-symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'SOL/USDT', 'DOGE/USDT', 'DOT/USDT', 'SHIB/USDT', 'MATIC/USDT', 'LTC/USDT', 'UNI/USDT', 'BCH/USDT', 'LINK/USDT', 'XLM/USDT', 'ATOM/USDT', 'VET/USDT', 'ICP/USDT', 'FIL/USDT', 'THETA/USDT']
-timeframe = '1d'
-since = binance.parse8601('2023-06-20T00:00:00Z')
+symbols = ['BTC-USD', 'ETH-USD', 'BNB-USD', 'XRP-USD', 'ADA-USD', 'SOL1-USD', 'DOGE-USD', 'DOT1-USD', 'SHIB-USD', 'MATIC-USD', 'LTC-USD', 'UNI-USD', 'BCH-USD', 'LINK-USD', 'XLM-USD', 'ATOM-USD', 'VET-USD', 'ICP-USD', 'FIL-USD', 'THETA-USD']
+since = '2023-06-20'
 
 for symbol in symbols:
-    ohlcv = fetch_ohlcv(symbol, timeframe, since)
-    if ohlcv:
-        df = ohlcv_to_dataframe(ohlcv)
-        store_dataframe(df, f'ohlcv_{symbol.replace("/", "_")}')
+    ohlcv = fetch_ohlcv(symbol, since)
+    if ohlcv is not None and not ohlcv.empty:
+        # Rename columns to match the existing structure if needed
+        df = ohlcv.rename(columns={'Date': 'timestamp', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
+        store_dataframe(df, f'ohlcv_{symbol.replace("-", "_")}')
         print(f'Stored data for {symbol}')
     else:
         print(f'Failed to fetch data for {symbol}')
+    sleep(1)  # Add a delay to avoid hitting rate limits
+
