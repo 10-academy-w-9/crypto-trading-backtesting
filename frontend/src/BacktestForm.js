@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = 'https://your-api-base-url.com/api'; // Replace with your actual API base URL
+const API_BASE_URL = 'http://localhost:5000/'; 
 
-const BacktestForm = () => {
+const BacktestForm = ({ token }) => {
   const [formData, setFormData] = useState({
     coin: '',
     name: '',
@@ -13,7 +13,6 @@ const BacktestForm = () => {
     end_date: '',
     parameters: [{ indicator_id: '', value: '' }],
   });
-  const [token, setToken] = useState('');
   const [coins, setCoins] = useState([]);
   const [indicators, setIndicators] = useState([]);
 
@@ -156,7 +155,7 @@ const BacktestForm = () => {
           {formData.parameters.map((param, index) => (
             <div key={index} className="flex items-center space-x-4">
               <div className="flex-grow">
-                <label htmlFor={`indicator_id_${index}`} className="block text-sm font-medium text-gray-700">Indicator ID:</label>
+                <label htmlFor={`indicator_id_${index}`} className="block text-sm font-medium text-gray-700">Indicator:</label>
                 <select
                   id={`indicator_id_${index}`}
                   name="indicator_id"

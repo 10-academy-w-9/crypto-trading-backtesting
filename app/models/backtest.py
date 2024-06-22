@@ -39,3 +39,9 @@ class Metric(db.Model):
     backtest_id = db.Column(db.Integer, db.ForeignKey('backtests.id'), nullable=False)
     metric_name = db.Column(db.String(255))
     metric_value = db.Column(db.Numeric(10, 2))
+
+class Coin(db.Model):
+    __tablename__ = 'coins'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
+    description = db.Column(db.Text)

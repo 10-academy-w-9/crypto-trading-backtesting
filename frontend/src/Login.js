@@ -1,10 +1,11 @@
-// src/Login.js
+// Login.js
+
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = 'https://your-api-base-url.com/api'; // Replace with your actual API base URL
+const API_BASE_URL = 'http://localhost:5000'; 
 
-const Login = () => {
+const Login = ({ setToken }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -17,12 +18,16 @@ const Login = () => {
         username,
         password,
       });
-      
+
       // Assuming your API returns a token upon successful login
-      const { token } = response.data;
-      // Store the token in localStorage or sessionStorage
-      localStorage.setItem('token', token);
-      
+      const { access_token } = response.data;
+      console.log('The access token is', response.data);
+      // Store the token in localStorage (you can also use sessionStorage)
+      localStorage.setItem('token', access_token);
+
+      // Set the token in parent component (App.js or where Login is used)
+      setToken(access_token);
+
       // Redirect to another page or handle successful login
       console.log('Login successful!');
     } catch (error) {
