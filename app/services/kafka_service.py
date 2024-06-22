@@ -1,8 +1,10 @@
-from confluent_kafka import Producer, Consumer, KafkaException
+import logging
+from confluent_kafka import Producer, Consumer, KafkaException, KafkaError
 import json
 
 class KafkaService:
     def __init__(self, brokers):
+        self.brokers = brokers
         self.producer = Producer({'bootstrap.servers': brokers})
         self.consumer = Consumer({
             'bootstrap.servers': brokers,
@@ -16,15 +18,20 @@ class KafkaService:
 
     def consume(self, topic, callback):
         self.consumer.subscribe([topic])
-        while True:
-            msg = self.consumer.poll(timeout=1.0)
-            if msg is None:
-                continue
-            if msg.error():
-                if msg.error().code() == KafkaError._PARTITION_EOF:
+        try:
+            while True:
+                msg = self.consumer.poll(timeout=1.0)
+                if msg is None:
                     continue
-                else:
-                    raise KafkaException(msg.error())
-            callback(json.loads(msg.value()))
+                if msg.error():
+                    if msg.error().code() == KafkaError._PARTITION_EOF:
+                        continue
+                    else:
+                        raise KafkaException(msg.error())
+                callback(json.loads(msg.value()))
+        except Exception as e:
+            logging.error(f"Error in Kafka consumer: {str(e)}")
+        finally:
+            self.consumer.close()
 
 kafka_service = KafkaService(brokers='localhost:9092')

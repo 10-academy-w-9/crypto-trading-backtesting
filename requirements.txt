@@ -6,3 +6,4 @@ psycopg2-binary
 confluent-kafka
 apache-airflow
 mlflow
+psycopg2
