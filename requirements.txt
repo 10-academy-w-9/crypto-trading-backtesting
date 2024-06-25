@@ -18,3 +18,4 @@ python-dotenv
 ccxt
 yfinance
 flask_cors
+Flask-Migrate
