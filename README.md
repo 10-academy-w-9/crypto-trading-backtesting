@@ -98,15 +98,16 @@ crypto-trading-backtesting/
 1. **Clone the repository:**
 
     ```sh
-    git clone git@github.com:your-username/crypto_trading_backtesting.git
-    cd crypto_trading_backtesting
+    git clone https://github.com/10-academy-w-9/crypto-trading-backtesting.git
+    cd crypto-trading-backtesting
     ```
 
 2. **Set up a virtual environment:**
 
     ```sh
     python3 -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+    source venv/bin/activate  #linux and Mac
+    `venv\Scripts\activate`   #On Windows 
     ```
 3. **Install Requirements:**
     ```sh
@@ -116,6 +117,10 @@ crypto-trading-backtesting/
     ```sh
    streamlit run src/frontend/app.py
    ```
+5. **Run Chronos**
+    ```sh
+    pip install git+https://github.com/amazon-science/chronos-forecasting.git
+    ```
 
 ## Usage
 1. **Provide input descriptions** of the trading strategies, including scenarios and expected outputs.
@@ -132,9 +137,9 @@ This project is licensed under the MIT License.
 ## Contributors
 
 - [@abyt101](https://github.com/AbYT101) - Abraham Teka
-- Temesgen Gebreabzgi
-- Selamawit Tibebu
-- Dereje Hinsermu
+- [@temesgen5335](https://github.com/temesgen5335)- Temesgen Gebreabzgi
+- [@SelamT94](https://github.com/SelamT94) - Selamawit Tibebu
+- [@derejehinsermu](https://github.com/derejehinsermu) - Dereje Hinsermu
 
 ## Challenge by
 
