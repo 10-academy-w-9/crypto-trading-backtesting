@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/dell/Desktop/crypto-trading-backtesting/mlruns/772879768246332599/f4fc90e5d4af4d00bb5096148fc64581/artifacts
+end_time: 1719087436920
+entry_point_name: ''
+experiment_id: '772879768246332599'
+lifecycle_stage: active
+run_id: f4fc90e5d4af4d00bb5096148fc64581
+run_name: RefinedSMAStrategy
+run_uuid: f4fc90e5d4af4d00bb5096148fc64581
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1719087436712
+status: 3
+tags: []
+user_id: dell
