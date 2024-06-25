@@ -4,9 +4,12 @@ class Backtest(db.Model):
     __tablename__ = 'backtests'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
+    symbol = db.Column(db.String(20))
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
-    status = db.Column(db.String(50))
+    inital_cash = db.Column(db.Integer)
+    fee = db.Column(db.Integer)
+    # status = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 class Indicator(db.Model):
