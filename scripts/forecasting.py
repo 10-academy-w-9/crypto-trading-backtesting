@@ -6,6 +6,7 @@ import numpy as np
 from sqlalchemy import create_engine
 import os
 
+
 # RDS connection information
 rds_host = os.getenv('PG_HOST')
 rds_port = os.getenv('PG_PORT')
