@@ -3,15 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/'; 
+const API_BASE_URL = 'http://localhost:5000';
 
 const BacktestForm = ({ token }) => {
   const [formData, setFormData] = useState({
     coin: '',
     name: '',
+    inital_cash: 0,
+    fee: 0,
     start_date: '',
     end_date: '',
-    parameters: [{ indicator_id: '', value: '' }],
   });
   const [coins, setCoins] = useState([]);
   const [indicators, setIndicators] = useState([]);
@@ -46,24 +47,8 @@ const BacktestForm = ({ token }) => {
 
     // Call functions to fetch coins and indicators
     fetchCoins();
-    fetchIndicators();
+    // fetchIndicators();
   }, [token]);
-
-  // Function to handle form input change
-  const handleInputChange = (index, event) => {
-    const { name, value } = event.target;
-    const updatedParameters = [...formData.parameters];
-    updatedParameters[index][name] = value;
-    setFormData({ ...formData, parameters: updatedParameters });
-  };
-
-  // Function to add new parameter field
-  const addParameter = () => {
-    setFormData({
-      ...formData,
-      parameters: [...formData.parameters, { indicator_id: '', value: '' }],
-    });
-  };
 
   // Function to handle form submission
   const handleSubmit = async (event) => {
@@ -73,6 +58,7 @@ const BacktestForm = ({ token }) => {
       const response = await axios.post(`${API_BASE_URL}/backtests`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
       });
 
@@ -82,9 +68,10 @@ const BacktestForm = ({ token }) => {
       setFormData({
         coin: '',
         name: '',
+        inital_cash: 0,
+        fee: 0,
         start_date: '',
         end_date: '',
-        parameters: [{ indicator_id: '', value: '' }],
       });
     } catch (error) {
       console.error('Error creating backtest:', error);
@@ -109,7 +96,7 @@ const BacktestForm = ({ token }) => {
             <option value="">Select a Coin</option>
             {coins.map((coin) => (
               <option key={coin.id} value={coin.symbol}>
-                {coin.name} ({coin.symbol})
+                {coin.name}
               </option>
             ))}
           </select>
@@ -122,6 +109,31 @@ const BacktestForm = ({ token }) => {
             name="name"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+        </div>
+        <div className="mb-4">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700">Initial cash:</label>
+          <input
+            type="number"
+            id="inital_cash"
+            name="Initial cash"
+            value={formData.inital_cash}
+            onChange={(e) => setFormData({ ...formData, inital_cash: +e.target.value })}
+            required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+        </div>
+        <div className="mb-4">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700">Fee in %:</label>
+          <input
+            type="number"
+            id="fee"
+            name="fee"
+            placeholder='0.02%'
+            value={formData.fee}
+            onChange={(e) => setFormData({ ...formData, fee: +e.target.value })}
             required
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           />
@@ -150,52 +162,6 @@ const BacktestForm = ({ token }) => {
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           />
         </div>
-        <fieldset className="mb-4">
-          <legend className="block text-sm font-medium text-gray-700">Parameters:</legend>
-          {formData.parameters.map((param, index) => (
-            <div key={index} className="flex items-center space-x-4">
-              <div className="flex-grow">
-                <label htmlFor={`indicator_id_${index}`} className="block text-sm font-medium text-gray-700">Indicator:</label>
-                <select
-                  id={`indicator_id_${index}`}
-                  name="indicator_id"
-                  value={param.indicator_id}
-                  onChange={(e) => handleInputChange(index, e)}
-                  required
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                >
-                  <option value="">Select an Indicator</option>
-                  {indicators.map((indicator) => (
-                    <option key={indicator.id} value={indicator.id}>
-                      {indicator.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex-grow">
-                <label htmlFor={`value_${index}`} className="block text-sm font-medium text-gray-700">Value:</label>
-                <input
-                  type="number"
-                  id={`value_${index}`}
-                  name="value"
-                  value={param.value}
-                  onChange={(e) => handleInputChange(index, e)}
-                  step="any"
-                  required
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Value"
-                />
-              </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={addParameter}
-            className="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Add Parameter
-          </button>
-        </fieldset>
         <div>
           <button
             type="submit"

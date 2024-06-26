@@ -16,7 +16,7 @@ bp = Blueprint('data', __name__)
 def fetch_coins():
     # Assuming you have a model named Coin
     coins = Coin.query.all()
-    coin_list = [{'id': coin.id, 'name': coin.name, 'symbol': coin.symbol} for coin in coins]
+    coin_list = [{'id': coin.id, 'name': coin.name} for coin in coins]
     
     return jsonify({'coins': coin_list}), 200
 

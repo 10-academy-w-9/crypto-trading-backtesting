@@ -32,7 +32,7 @@ def store_dataframe(df, table_name):
 
 # Fetch and store data for multiple symbols
 symbols = ['BTC-USD', 'ETH-USD', 'BNB-USD', 'XRP-USD', 'ADA-USD', 'SOL1-USD', 'DOGE-USD', 'DOT1-USD', 'SHIB-USD', 'MATIC-USD', 'LTC-USD', 'UNI-USD', 'BCH-USD', 'LINK-USD', 'XLM-USD', 'ATOM-USD', 'VET-USD', 'ICP-USD', 'FIL-USD', 'THETA-USD']
-since = '2023-06-20'
+since = '2020-06-20'
 
 for symbol in symbols:
     ohlcv = fetch_ohlcv(symbol, since)
