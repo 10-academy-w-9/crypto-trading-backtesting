@@ -19,3 +19,14 @@ ccxt
 yfinance
 flask_cors
 safetensors
+torch>=2.1
+lightning>=2.0
+gluonts~=0.14.3
+# numpy~=1.26.0
+einops==0.7.*
+jaxtyping~=0.2.24
+python-dotenv
+hydra-core==1.3
+huggingface_hub>=0.23.0
+safetensors
+jax[cpu]
