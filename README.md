@@ -19,6 +19,22 @@ The Crypto Trading Backtesting project aims to provide a robust, large-scale tra
 
 - **Frontend Interface**: Provides a user-friendly interface for running backtests and viewing results.
 
+- **Index Fund**: Algorithm that shows the best backtested strategy and implements a recommendation based on a combination of best returns.
+
+
+## Skills and Knowledge
+
+- **Skills**: Technical analysis, backtesting, trading, data pipeline building, structured streaming, workflow orchestration.
+- **Knowledge**: Financial prediction, enterprise-grade data engineering using Apache and Databricks tools.
+
+## Technical Skills
+
+- **Python Programming**
+- **SQL Programming**
+- **Data & Analytics Engineering**
+- **MLOps**
+- **Software Development Frameworks**
+
 ## Project Structure
 
 ```
@@ -58,25 +74,26 @@ crypto-trading-backtesting/
 │   ├── kafka-config.yaml
 │   └── mlflow-config.yaml
 │
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── backtests/
-│
 ├── docs/
-│   ├── README.md
 │   ├── DESIGN.md
 │   └── USAGE.md
 │
 ├── notebooks/
-│   ├── data_exploration.ipynb
+│   ├── backtesting_yfinance.ipynb
 │   ├── backtesting.ipynb
+│   ├── Chronos.ipynb
+│   ├── data_exploration.ipynb
 │   └── model_training.ipynb
+│   └── moirai_forcast.ipynb
 │
 ├── scripts/
 │   ├── backtest_runner.py
 │   ├── data_ingestion.py
+│   ├── forecast_backtest_runner.py
+│   ├── forecast.py
+│   ├── mlflow_backtest.py
 │   └── model_training.py
+│   └── moirai_forcast.py
 │
 ├── tests/
 │   ├── unit/
@@ -87,13 +104,16 @@ crypto-trading-backtesting/
 │   │   ├── test_end_to_end.py
 │   └── conftest.py
 │
-├── Dockerfile
+├── .gitignore
 ├── docker-compose.yml
+├── Dockerfile
 ├── requirements.txt
+├── LICENSE
+├── README.md
 └── setup.py
 ```
     
-### Installation
+### Set up Instructions
 
 1. **Clone the repository:**
 
@@ -132,6 +152,8 @@ crypto-trading-backtesting/
 7. **Run Chronos**
     ```sh
     pip install git+https://github.com/amazon-science/chronos-forecasting.git
+
+    pip install pandas numpy torch sqlalchemy psycopg2-binary matplotlib chronos
     ```
 
 #### Altenative 
