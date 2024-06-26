@@ -113,13 +113,31 @@ crypto-trading-backtesting/
     ```sh
     pip install -r requirements.txt
     ```
-4. **Run Streamlit interface**
+4. **Configure environmnet variables and configurations:**
+    ```
+    .env
+    app/config.py
+    ```
+5. **Run backend api and mlflow server:**
     ```sh
-   streamlit run src/frontend/app.py
+    mlflow server --host 127.0.0.1 --port 5050
+    python run.py
    ```
-5. **Run Chronos**
+6. **Run frontend interface**
+    ```sh
+   cd frontend/
+   npm install
+   npm run start
+   ```
+7. **Run Chronos**
     ```sh
     pip install git+https://github.com/amazon-science/chronos-forecasting.git
+    ```
+
+#### Altenative 
+1. **Run run_project.sh file:**
+    ```
+    sh run_prject.sh
     ```
 
 ## Usage
