@@ -8,7 +8,7 @@ class Backtest(db.Model):
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
     inital_cash = db.Column(db.Integer)
-    fee = db.Column(db.Integer)
+    fee = db.Column(db.Float)
     # status = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
@@ -36,6 +36,7 @@ class Result(db.Model):
     losing_trades = db.Column(db.Integer)
     max_drawdown = db.Column(db.Numeric(10, 2))
     sharpe_ratio = db.Column(db.Numeric(10, 2))
+    is_best = db.Column(db.Boolean, default=False, nullable=True)
 
 class Metric(db.Model):
     __tablename__ = 'metrics'

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Box } from '@mui/material';
 import BacktestResultModal from './BacktestResultModal';
 
 const API_BASE_URL = 'http://localhost:5000';
@@ -34,36 +35,44 @@ const BacktestResultsTable = ({ token }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-6 bg-white shadow-md rounded-md">
-      <h2 className="text-xl font-semibold mb-4">Backtest Results</h2>
-      <table className="min-w-full bg-white">
-        <thead>
-          <tr>
-            <th className="py-2 px-4 border-b border-gray-200">Name</th>
-            <th className="py-2 px-4 border-b border-gray-200">Symbol</th>
-            <th className="py-2 px-4 border-b border-gray-200">Start Date</th>
-            <th className="py-2 px-4 border-b border-gray-200">End Date</th>
-            <th className="py-2 px-4 border-b border-gray-200">Initial Cash</th>
-            <th className="py-2 px-4 border-b border-gray-200">Fee</th>
-          </tr>
-        </thead>
-        <tbody>
-          {backtests.map((backtest) => (
-            <tr key={backtest.id} onClick={() => handleRowClick(backtest)} className="cursor-pointer">
-              <td className="py-2 px-4 border-b border-gray-200">{backtest.name}</td>
-              <td className="py-2 px-4 border-b border-gray-200">{backtest.symbol}</td>
-              <td className="py-2 px-4 border-b border-gray-200">{backtest.start_date}</td>
-              <td className="py-2 px-4 border-b border-gray-200">{backtest.end_date}</td>
-              <td className="py-2 px-4 border-b border-gray-200">{backtest.inital_cash}</td>
-              <td className="py-2 px-4 border-b border-gray-200">{backtest.fee}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <Box sx={{ maxWidth: '80%', mx: 'auto', mt: 10, p: 3, bgcolor: 'background.paper', boxShadow: 3, borderRadius: 2 }}>
+      <Typography variant="h6" component="h2" gutterBottom>
+        Backtest Results
+      </Typography>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Symbol</TableCell>
+              <TableCell>Start Date</TableCell>
+              <TableCell>End Date</TableCell>
+              <TableCell>Initial Cash</TableCell>
+              <TableCell>Fee</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {backtests.map((backtest) => (
+              <TableRow 
+                key={backtest.id} 
+                onClick={() => handleRowClick(backtest)} 
+                sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
+              >
+                <TableCell>{backtest.name}</TableCell>
+                <TableCell>{backtest.symbol}</TableCell>
+                <TableCell>{backtest.start_date}</TableCell>
+                <TableCell>{backtest.end_date}</TableCell>
+                <TableCell>{backtest.inital_cash}</TableCell>
+                <TableCell>{backtest.fee}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
       {selectedBacktest && (
         <BacktestResultModal backtest={selectedBacktest} onClose={handleCloseModal} token={token} />
       )}
-    </div>
+    </Box>
   );
 };
 

@@ -80,7 +80,8 @@ def get_backtest_results(backtest_id):
             'winning_trades': result.winning_trades,
             'losing_trades': result.losing_trades,
             'max_drawdown': float(result.max_drawdown),
-            'sharpe_ratio': float(result.sharpe_ratio)
+            'sharpe_ratio': float(result.sharpe_ratio),
+            'is_best': result.is_best
         })
     
     return jsonify({'results': result_list}), 200

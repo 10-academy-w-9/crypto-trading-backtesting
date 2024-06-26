@@ -41,19 +41,16 @@ def run_and_evaluate_backtest(backtest_id, symbol, initial_cash, fee, start_date
     ]
     
     results = []
+    result_objects = []
     for strategy in strategies:
-        
         print(strategy, symbol, initial_cash, fee, start_date, end_date)
         result = run_backtest(strategy, symbol, initial_cash, fee, start_date, end_date)
         result['backtest_id'] = backtest_id
-        if(strategy == RsiBollingerBandsStrategy):
-            result['strategy'] = 'RsiBollingerBandsStrategy'
-        elif (strategy == MacdStrategy):
-            result['strategy'] = 'MacdStrategy'
-        elif(strategy == StochasticOscillatorStrategy):
-            result['strategy'] = 'StochasticOscillatorStrategy'
+        result['strategy'] = strategy.__name__
+        
         result_obj = Result(**result)
         db.session.add(result_obj)
+        result_objects.append(result_obj)
         
         metrics = {
             "total_return": result['total_return'],
@@ -65,11 +62,11 @@ def run_and_evaluate_backtest(backtest_id, symbol, initial_cash, fee, start_date
         }
         mlflow_service.log_metrics(run_name=f"Backtest_{backtest_id}", metrics=metrics)
         
-        # Uncomment to publish results to Kafka
-        # kafka_service.produce('backtest_results', {
-        #     "backtest_id": backtest_id,
-        #     "metrics": metrics
-        # })
+        # publish results to Kafka
+        kafka_service.produce('backtest_results', {
+            "backtest_id": backtest_id,
+            "metrics": metrics
+        })
         
         db.session.commit()
         results.append(result)
@@ -84,10 +81,14 @@ def run_and_evaluate_backtest(backtest_id, symbol, initial_cash, fee, start_date
     scores = [score_backtest(result, min_return, max_return, min_sharpe, max_sharpe, min_drawdown, max_drawdown) for result in results]
     
     best_strategy_index = scores.index(max(scores))
-    best_strategy = strategies[best_strategy_index]
     
+    for idx, result_obj in enumerate(result_objects):
+        result_obj.is_best = (idx == best_strategy_index)
+    
+    db.session.commit()
+
     print("Best Strategy:")
-    print(best_strategy.__name__)
+    print(strategies[best_strategy_index].__name__)
     print("Score:")
     print(scores[best_strategy_index])
     print("Metrics:")
