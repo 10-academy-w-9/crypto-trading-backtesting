@@ -25,7 +25,7 @@ const BacktestResultModal = ({ backtest, onClose, token }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-auto bg-smoke-light flex">
-      <div className="relative p-8 bg-white w-full max-w-md m-auto flex-col flex rounded-lg shadow-lg">
+      <div className="relative p-8 bg-white w-fit m-auto flex-col flex rounded-lg shadow-lg">
         <h3 className="text-xl font-semibold mb-4">{backtest.name} Details</h3>
         <button
           onClick={onClose}
@@ -36,6 +36,7 @@ const BacktestResultModal = ({ backtest, onClose, token }) => {
         <table className="min-w-full bg-white">
           <thead>
             <tr>
+              <th className="py-2 px-4 border-b border-gray-200">Strategy</th>
               <th className="py-2 px-4 border-b border-gray-200">Total Return</th>
               <th className="py-2 px-4 border-b border-gray-200">Number of Trades</th>
               <th className="py-2 px-4 border-b border-gray-200">Winning Trades</th>
@@ -47,6 +48,7 @@ const BacktestResultModal = ({ backtest, onClose, token }) => {
           <tbody>
             {results.map((result) => (
               <tr key={result.id}>
+                <td className="py-2 px-4 border-b border-gray-200">{result.strategy}</td>
                 <td className="py-2 px-4 border-b border-gray-200">{result.total_return}</td>
                 <td className="py-2 px-4 border-b border-gray-200">{result.number_of_trades}</td>
                 <td className="py-2 px-4 border-b border-gray-200">{result.winning_trades}</td>

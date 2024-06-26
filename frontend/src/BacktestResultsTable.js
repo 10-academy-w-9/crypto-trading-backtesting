@@ -54,7 +54,7 @@ const BacktestResultsTable = ({ token }) => {
               <td className="py-2 px-4 border-b border-gray-200">{backtest.symbol}</td>
               <td className="py-2 px-4 border-b border-gray-200">{backtest.start_date}</td>
               <td className="py-2 px-4 border-b border-gray-200">{backtest.end_date}</td>
-              <td className="py-2 px-4 border-b border-gray-200">{backtest.initial_cash}</td>
+              <td className="py-2 px-4 border-b border-gray-200">{backtest.inital_cash}</td>
               <td className="py-2 px-4 border-b border-gray-200">{backtest.fee}</td>
             </tr>
           ))}

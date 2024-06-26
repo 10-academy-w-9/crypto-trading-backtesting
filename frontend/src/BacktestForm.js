@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const API_BASE_URL = 'http://localhost:5000';
 
@@ -64,7 +66,10 @@ const BacktestForm = ({ token }) => {
 
       // Handle successful response
       console.log('Backtest created:', response.data);
-      // Reset form fields after successful submission (optional)
+      toast.success('Backtest created successfully! Please check the results table!');
+
+
+      // Reset form fields after successful submission 
       setFormData({
         coin: '',
         name: '',
@@ -76,6 +81,7 @@ const BacktestForm = ({ token }) => {
     } catch (error) {
       console.error('Error creating backtest:', error);
       // Handle error, show error message to user
+      toast.error('Something went wrong!');
     }
   };
 
@@ -171,6 +177,7 @@ const BacktestForm = ({ token }) => {
           </button>
         </div>
       </form>
+      <ToastContainer />
     </div>
   );
 };

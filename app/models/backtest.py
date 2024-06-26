@@ -29,6 +29,7 @@ class Result(db.Model):
     __tablename__ = 'results'
     id = db.Column(db.Integer, primary_key=True)
     backtest_id = db.Column(db.Integer, db.ForeignKey('backtests.id'), nullable=False)
+    strategy = db.Column(db.String(255))
     total_return = db.Column(db.Numeric(10, 2))
     number_of_trades = db.Column(db.Integer)
     winning_trades = db.Column(db.Integer)

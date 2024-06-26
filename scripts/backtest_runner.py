@@ -99,43 +99,43 @@ class StochasticOscillatorStrategy(bt.Strategy):
             if self.stoch.lines.percK[0] > self.params.stoch_high and self.stoch.lines.percK[-1] <= self.params.stoch_high:
                 self.sell()
 
+
 def run_backtest(strategy_class, symbol, initial_cash, fee, start_date, end_date):
     data = fetch_data(symbol, start_date, end_date)
-    print('we back to data')
     data_feed = bt.feeds.PandasData(dataname=data)
     
-    # Initialize cerebro
     cerebro = bt.Cerebro()
     cerebro.addstrategy(strategy_class)
     cerebro.adddata(data_feed)
     cerebro.broker.set_cash(float(initial_cash))
-    cerebro.broker.setcommission(commission=0.002)
+    cerebro.broker.setcommission(commission=fee)
     
-    # Add analyzers
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='tradeanalyzer')
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.SharpeRatio_A, _name='sharpe')
-    print(1)
-    # Print starting conditions
-    print(f'Starting Portfolio Value: {cerebro.broker.getvalue():.2f}')
     
-    # Run backtest
+    starting_value = cerebro.broker.getvalue()
+    print(f'Starting Portfolio Value: {starting_value:.2f}')
+    
     result = cerebro.run()
-    print(2)
     
-    # Extracting backtest metrics
     total_return = cerebro.broker.getvalue() / initial_cash - 1
-    number_of_trades = result[0].analyzers.tradeanalyzer.get_analysis()['total']['closed']
-    winning_trades = result[0].analyzers.tradeanalyzer.get_analysis()['won']['total']
-    losing_trades = result[0].analyzers.tradeanalyzer.get_analysis()['lost']['total']
-    max_drawdown = result[0].analyzers.drawdown.get_analysis()['max']['drawdown']
-    sharpe_ratio = result[0].analyzers.sharpe.get_analysis().get('sharperatio', 0.0)
     
-    # Print ending conditions
-    print(f'Ending Portfolio Value: {cerebro.broker.getvalue():.2f}')
-    print(1)
+    # Extract trade analysis metrics
+    trade_analysis = result[0].analyzers.tradeanalyzer.get_analysis()
+    number_of_trades = trade_analysis.get('total', {}).get('closed', 0)
+    winning_trades = trade_analysis.get('won', {}).get('total', 0)
+    losing_trades = trade_analysis.get('lost', {}).get('total', 0)
     
-    # Return results as a dictionary
+    drawdown_analysis = result[0].analyzers.drawdown.get_analysis()
+    max_drawdown = drawdown_analysis.get('max', {}).get('drawdown', 0.0)
+    
+    sharpe_analysis = result[0].analyzers.sharpe.get_analysis()
+    sharpe_ratio = sharpe_analysis.get('sharperatio', 0.0)
+    
+    ending_value = cerebro.broker.getvalue()
+    print(f'Ending Portfolio Value: {ending_value:.2f}')
+    
     return {
         'backtest_id': 0,
         'total_return': total_return,
@@ -146,20 +146,19 @@ def run_backtest(strategy_class, symbol, initial_cash, fee, start_date, end_date
         'sharpe_ratio': sharpe_ratio
     }
 
+
+
 def score_backtest(result):
-    # Define weights for each metric
     weights = {
         'total_return': 0.4,
         'sharpe_ratio': 0.4,
         'max_drawdown': 0.2,
     }
     
-    # Normalize the values (example with min-max normalization)
     normalized_return = (result['total_return'] - min_return) / (max_return - min_return)
     normalized_sharpe = (result['sharpe_ratio'] - min_sharpe) / (max_sharpe - min_sharpe)
     normalized_drawdown = (max_drawdown - result['max_drawdown']) / (max_drawdown - min_drawdown)
     
-    # Calculate the score
     score = (
         weights['total_return'] * normalized_return +
         weights['sharpe_ratio'] * normalized_sharpe +
@@ -185,7 +184,7 @@ if __name__ == "__main__":
     for strategy in strategies:
         result = run_backtest(strategy, symbol, initial_cash, fee, start_date, end_date)
         results.append(result)
-    
+    print(results)
     # Determine the min and max values for normalization
     min_return = min(result['total_return'] for result in results)
     max_return = max(result['total_return'] for result in results)

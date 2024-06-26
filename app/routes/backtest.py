@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify, current_app
 from app.models.backtest import Backtest, Result
 from app import db
 from flask_jwt_extended import jwt_required
-from app.services.backtest_service import run_backtest_by_id
+from app.services.backtest_service import run_backtest_by_id, run_and_evaluate_backtest
 from app.services.kafka_service import kafka_service
 from flask_cors import CORS, cross_origin
 
@@ -34,10 +34,11 @@ def run_backtest():
     db.session.commit()
 
 
-    # Publish backtest to Kafka for processing
-    kafka_service.produce('backtest_scenes', {
-        "backtest_id": new_backtest.id
-    })
+    # # Publish backtest to Kafka for processing
+    # kafka_service.produce('backtest_scenes', {
+    #     "backtest_id": new_backtest.id
+    # })
+    run_and_evaluate_backtest(backtest_id=new_backtest.id, symbol=symbol, initial_cash= inital_cash, fee=fee, start_date=start_date,end_date= end_date)
 
     return jsonify({"msg": "Backtest created and published to Kafka", "backtest_id": new_backtest.id}), 201
 
@@ -55,7 +56,7 @@ def get_backtests():
             'symbol': backtest.symbol,
             'start_date': backtest.start_date.strftime('%Y-%m-%d'),
             'end_date': backtest.end_date.strftime('%Y-%m-%d'),
-            'initial_cash': backtest.initial_cash,
+            'inital_cash': backtest.inital_cash,
             'fee': backtest.fee,
             'created_at': backtest.created_at.strftime('%Y-%m-%d %H:%M:%S')
         })
@@ -63,7 +64,7 @@ def get_backtests():
 
 @bp.route('/backtests/<int:backtest_id>/results', methods=['GET'])
 @jwt_required()
-@cross_origin(origin='*')
+@cross_origin(origins='*')
 def get_backtest_results(backtest_id):
     results = Result.query.filter_by(backtest_id=backtest_id).all()
     if not results:
@@ -73,6 +74,7 @@ def get_backtest_results(backtest_id):
     for result in results:
         result_list.append({
             'id': result.id,
+            'strategy': result.strategy,
             'total_return': float(result.total_return),
             'number_of_trades': result.number_of_trades,
             'winning_trades': result.winning_trades,
