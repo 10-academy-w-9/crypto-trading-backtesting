@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 import threading
 from flask_cors import CORS  
+from flask_migrate import Migrate
 
 db = SQLAlchemy()
 jwt = JWTManager()
@@ -19,6 +20,7 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
+    migrate = Migrate(app, db)
 
     CORS(app)
 
