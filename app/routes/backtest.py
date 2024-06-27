@@ -34,11 +34,10 @@ def run_backtest():
     db.session.commit()
 
 
-    # # Publish backtest to Kafka for processing
-    # kafka_service.produce('backtest_scenes', {
-    #     "backtest_id": new_backtest.id
-    # })
-    run_and_evaluate_backtest(backtest_id=new_backtest.id, symbol=symbol, initial_cash= inital_cash, fee=fee, start_date=start_date,end_date= end_date)
+    # Publish backtest to Kafka for processing
+    kafka_service.produce('backtest_scenes', {
+        "backtest_id": new_backtest.id
+    })
 
     return jsonify({"msg": "Backtest created and published to Kafka", "backtest_id": new_backtest.id}), 201
 
